@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="sk">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Nákupovanie</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f2f2f2;
+            margin: 0;
+            padding: 30px;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        .produkty {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            max-width: 900px;
+            margin: 30px auto;
+        }
+
+        .produkt {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px #bbb;
+        }
+
+        button {
+            background: #1976d2;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #125aa0;
+        }
+
+        .kosik {
+            background: white;
+            max-width: 900px;
+            margin: 30px auto;
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        .cena {
+            font-size: 25px;
+            font-weight: bold;
+        }
+
+        input {
+            padding: 10px;
+            margin-right: 10px;
+        }
+
+        .sprava {
+            margin: 15px 0;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+
+<body>
+
+    <h1>🛒 Internetový obchod</h1>
+
+    <div id="sprava" class="sprava"></div>
+
+    <div id="produkty" class="produkty"></div>
+
+
+    <div class="kosik">
+
+        <h2>🛒 Košík</h2>
+
+        <div id="kosik"></div>
+
+        <p class="cena">
+            Cena: <span id="cena">0.00</span> €
+        </p>
+
+        <hr>
+
+        <h3>Zľavový kupón</h3>
+
+        <input
+            type="text"
+            id="kupon"
+            placeholder="Napr. Kupon1"
+        >
+
+        <button onclick="pouzitKupon()">
+            Použiť kupón
+        </button>
+
+        <p id="zlava"></p>
+
+    </div>
+
+
+<script>
+
+    // Načítanie produktov z API
+    async function nacitatProdukty() {
+
+        const response = await fetch("/api/products");
+
+        const produkty = await response.json();
+
+        const div = document.getElementById("produkty");
+
+        div.innerHTML = "";
+
+        for (const nazov in produkty) {
+
+            const produkt = produkty[nazov];
+
+            div.innerHTML += `
+                <div class="produkt">
+
+                    <h2>${produkt.nazov}</h2>
+
+                    <p>
+                        Kategória:
+                        ${produkt.kategoria}
+                    </p>
+
+                    <p>
+                        Cena:
+                        ${produkt.cena.toFixed(2)} €
+                    </p>
+
+                    <p>
+                        Sklad:
+                        ${produkt.sklad}
+                    </p>
+
+                    <button onclick="pridat('${produkt.nazov}')">
+                        Pridať do košíka
+                    </button>
+
+                </div>
+            `;
+        }
+    }
+
+
+    // Pridanie produktu
+    async function pridat(nazov) {
+
+        const response = await fetch("/api/cart/add", {
+
+            method: "POST",
+
+            headers: {
+                "Content-Type": "application/json"
+            },
+
+            body: JSON.stringify({
+                nazov: nazov
+            })
+
+        });
+
+        const data = await response.json();
+
+        document.getElementById("sprava").innerText =
+            data.message;
+
+        nacitatProdukty();
+
+        nacitatKosik();
+    }
+
+
+    // Načítanie košíka
+    async function nacitatKosik() {
+
+        const response = await fetch("/api/cart");
+
+        const data = await response.json();
+
+        const div = document.getElementById("kosik");
+
+        div.innerHTML = "";
+
+        if (data.kosicek.length === 0) {
+
+            div.innerHTML = "Košík je prázdny.";
+
+        } else {
+
+            for (const produkt of data.kosicek) {
+
+                div.innerHTML += `
+                    <p>
+                        ${produkt.nazov}
+                        -
+                        ${produkt.cena.toFixed(2)} €
+                    </p>
+                `;
+            }
+        }
+
+        document.getElementById("cena").innerText =
+            data.cena.toFixed(2);
+    }
+
+
+    // Kupón
+    async function pouzitKupon() {
+
+        const kupon =
+            document.getElementById("kupon").value;
+
+        const response = await fetch("/api/coupon", {
+
+            method: "POST",
+
+            headers: {
+                "Content-Type": "application/json"
+            },
+
+            body: JSON.stringify({
+                kupon: kupon
+            })
+
+        });
+
+        const data = await response.json();
+
+        document.getElementById("zlava").innerText =
+            data.message +
+            " | Cena: " +
+            data.cena.toFixed(2) +
+            " €";
+    }
+
+
+    // Pri otvorení stránky
+    nacitatProdukty();
+    nacitatKosik();
+
+</script>
+
+</body>
+
+</html>
